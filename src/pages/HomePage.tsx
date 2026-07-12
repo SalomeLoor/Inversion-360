@@ -1,28 +1,53 @@
-import  { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
     AlertTriangle,
     ShieldCheck,
 } from "lucide-react";
+import { useNavigate } from 'react-router-dom'
 import '../styles/HomePage.css'
+import { getSessionUser, loginUser, registerUser, saveSession } from '../utils/auth'
 
 const HomePage = () => {
+    const navigate = useNavigate()
 
-    const [mode, setMode] = useState("login");
+    const [mode, setMode] = useState<"login" | "register">("login");
     const [form, setForm] = useState({
-        fullName: "Asesor Demo",
-        email: "asesor@inversion360.com",
-        password: "Demo12345"
+        fullName: "",
+        email: "",
+        password: ""
     });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    /* async function submitAuth(event) {
-       ;
-         } catch (requestError) {
-             
-         } finally {
-             
-         }*/
+    useEffect(() => {
+        if (getSessionUser()) {
+            navigate('/dashboard')
+        }
+    }, [navigate])
+
+    async function submitAuth(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        setError('')
+        setLoading(true)
+
+        try {
+            const result = mode === 'login'
+                ? await loginUser({ email: form.email, password: form.password })
+                : await registerUser({ fullName: form.fullName, email: form.email, password: form.password })
+
+            if (!result.success) {
+                setError(result.error)
+                return
+            }
+
+            saveSession(result.user)
+            navigate('/dashboard')
+        } catch {
+            setError('Ocurrió un error inesperado. Inténtalo de nuevo.')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     return (
         <main className="auth-page">
@@ -41,7 +66,7 @@ const HomePage = () => {
                 </p>
             </section>
 
-            <form className="auth-card" >
+            <form className="auth-card" onSubmit={submitAuth}>
                 <div className="segmented auth-tabs">
                     <button className={mode === "login" ? "active" : ""} onClick={() => setMode("login")} type="button">
                         Login
