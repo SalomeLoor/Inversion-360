@@ -7,6 +7,7 @@ import AdvisorPanel from './components/AdvisorPanel'
 import Principal from './components/Principal'
 import MisPropuestas from './components/MisPropuestas'
 import HistorialPropuestas from './components/HistorialPropuestas'
+import LoginPage from './pages/LoginPage'
 
 function App() {
 
@@ -14,16 +15,14 @@ function App() {
     <>
       <Router>
         <Routes>
-          <Route path="*" element={<HomePage />} />
-
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/inversor" element={<InvestorPanel />}>
             <Route path="principal" element={<Principal />} />
             <Route path="propuestas" element={<MisPropuestas />} />
             <Route path="historial" element={<HistorialPropuestas />} />
           </Route>
-
-
-
+          <Route path="propuestas" element={<HistorialPropuestas />} />
           <Route path="/asesor" element={<AdvisorPanel />} />
         </Routes>
       </Router>
