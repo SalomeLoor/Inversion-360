@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { inversorService } from '../services/inversorservice';
-import { useAuth } from '../context/AuthContext';
 import '../styles/MisPropuestas.css';
 
 interface Instrumento {
