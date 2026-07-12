@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X, Edit, RefreshCw, MessageSquare } from 'lucide-react';
+import { Check, X, Edit, RefreshCw } from 'lucide-react';
 import { asesorService } from '../services/asesorservice';
 import '../styles/HistorialPropuestas.css';
 

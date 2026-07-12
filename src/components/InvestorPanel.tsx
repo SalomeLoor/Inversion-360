@@ -1,5 +1,4 @@
 import type React from "react";
-import type { ComponentType } from "react";
 import { LogOut, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
@@ -7,11 +6,6 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/InvestorPanel.css";
 import { OptionsMenu } from "../utils/OptionsMenu";
 
-interface MenuOption {
-  rutas_padre: string;
-  icono?: ComponentType<any>;
-  btn_Name: string;
-}
 
 const InvestorPanel = (): React.ReactElement => {
   const navigate = useNavigate();

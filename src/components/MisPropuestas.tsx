@@ -42,7 +42,6 @@ interface Propuesta {
 const STATUS_TABS = ['Pendientes', 'Aprobadas', 'Rechazadas', 'Editadas'];
 
 const MisPropuestas: React.FC = () => {
-  const { user } = useAuth();
   const [propuestas, setPropuestas] = useState<Propuesta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

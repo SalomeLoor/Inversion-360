@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquareText, Scale, UserCheck, ArrowRight, ChevronRight, RefreshCw, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ChatBot from '../components/Chatbot/Chatbot';
-import { serviceFinancial } from '../services/financialservice';
 import '../styles/Principal.css';
 import { inversorService } from '../services/inversorservice';
 
