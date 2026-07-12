@@ -2,7 +2,6 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import './App.css'
 import HomePage from './pages/HomePage'
-import Dashboard from './pages/Dashboard'
 import InvestorPanel from './components/InvestorPanel'
 import AdvisorPanel from './components/AdvisorPanel'
 import Principal from './components/Principal'
@@ -16,7 +15,6 @@ function App() {
       <Router>
         <Routes>
           <Route path="*" element={<HomePage />} />
-          {/* <Route path="/dashboard" element={<Dashboard />} /> */}
 
           <Route path="/inversor" element={<InvestorPanel />}>
             <Route path="principal" element={<Principal />} />
