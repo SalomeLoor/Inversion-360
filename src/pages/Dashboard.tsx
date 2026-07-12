@@ -1,15 +1,23 @@
 import { ClipboardCheck, Home, LogOut, ShieldCheck, UserRound } from "lucide-react"
 import AdvisorPanel from "../components/AdvisorPanel"
 import InvestorPanel from "../components/InvestorPanel"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import '../styles/Dashboard.css'
+import { clearSession, getSessionUser } from "../utils/auth"
 
 const Dashboard = () => {
     const navigate = useNavigate();
     const [activeView, setActiveView] = useState("dashboard");
 
+    useEffect(() => {
+        if (!getSessionUser()) {
+            navigate('/')
+        }
+    }, [navigate])
+
     function logout() {
+        clearSession()
         setActiveView("home");
         navigate("/");
     }
