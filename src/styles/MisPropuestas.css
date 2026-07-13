@@ -561,3 +561,44 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+.estado-aprobada {
+  color: #065f46;
+}
+.estado-rechazada {
+  color: #991b1b;
+}
+.estado-pendiente {
+  color: #92400e;
+}
+.estado-editada {
+  color: #1e40af;
+}
+
+.pr-pill-pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+.pr-pill-aprobada {
+  background: #d1fae5;
+  color: #065f46;
+}
+.pr-pill-rechazada {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.pr-pill-editada {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.empty-state-small {
+  padding: 20px;
+  text-align: center;
+  color: #7a908c;
+  font-size: 14px;
+}
+
+.pr-ticket.active {
+  border-color: #266c61;
+  background: #f0f9f7;
+}

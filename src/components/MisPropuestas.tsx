@@ -1,233 +1,337 @@
-import { AlertTriangle, Clock3, Fingerprint, LayoutGrid, RotateCcw } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"; // libreria para graficos
-import "../styles/MisPropuestas.css";
-import { useState } from "react";
+import React, { useEffect, useState } from 'react';
+import {
+  AlertTriangle,
+  Clock3,
+  Fingerprint,
+  LayoutGrid,
+  RotateCcw,
+} from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { inversorService } from '../services/inversorservice';
+import '../styles/MisPropuestas.css';
 
-const RULES = [
-  { label: "Objetivo", value: "+3 pts" },
-  { label: "Horizonte", value: "+3 pts" },
-  { label: "Tolerancia", value: "+5 pts" },
-  { label: "Ajuste (edad/ingreso)", value: "+1 pt" },
-];
-const ASSETS = [
-  { code: "EC-CASH", desc: "Depósito a Plazo Fijo (DPF)", risk: "Bajo", pct: 5, amount: 25 },
-  { code: "EC-MUTUAL-FUND", desc: "Fondo mutuo local administrado", risk: "Medio", pct: 10, amount: 50 },
-  { code: "EC-REIT", desc: "Fideicomiso inmobiliario (UIO/GYE)", risk: "Medio", pct: 10, amount: 50 },
-  { code: "EC-FAVORITA", desc: "Acciones Corporación Favorita C.A.", risk: "Alto", pct: 45, amount: 225 },
-  { code: "EC-PICHINCHA", desc: "Acciones Banco Pichincha C.A.", risk: "Alto", pct: 15, amount: 75 },
-  { code: "EC-GOV-BOND", desc: "Bonos del Estado ecuatoriano", risk: "Alto", pct: 15, amount: 75 },
-];
-const ASSET_COLORS = ["#266c61", "#6a7ee0", "#a06be0", "#d7638f", "#e0a13f", "#a83f3f"];
+interface Instrumento {
+  nombre: string;
+  categoria: string;
+  porcentaje: number;
+  riesgo: string;
+  monto?: number;
+}
 
-const STATUS_TABS = ["Pendientes", "Aprobadas", "Rechazadas"];
+interface Propuesta {
+  id: string;
+  perfil_id: string;
+  instrumentos: Instrumento[] | string; // Puede ser array o string JSON
+  riesgo_esperado: string;
+  estado: 'pendiente' | 'aprobada' | 'rechazada' | 'editada';
+  justificacion?: string;
+  version_reglas?: string;
+  createdAt: string;
+  PerfilInversionista?: {
+    perfil: string;
+    objetivo: string;
+    horizonte: string;
+    tolerancia_perdida: string;
+    ingresos: string;
+    experiencia: string;
+    score: number;
+  };
+}
 
-const PROPOSALS = [
-    { id: "26b6e6d7", profile: "Agresivo", objetivo: "Comprar casa", inversion: "$500 USD", generado: "11 jul 2026, 20:23" },
-    //{ id: "9f3a12ce", profile: "Moderado", objetivo: "Fondo de emergencia", inversion: "$300 USD", generado: "09 jul 2026, 11:05" },
-   // { id: "7c81d40b", profile: "Conservador", objetivo: "Jubilación", inversion: "$800 USD", generado: "02 jul 2026, 16:40" },
-];
+const STATUS_TABS = ['Pendientes', 'Aprobadas', 'Rechazadas', 'Editadas'];
 
-const MisPropuestas = () => {
+const MisPropuestas: React.FC = () => {
+  const [propuestas, setPropuestas] = useState<Propuesta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [statusTab, setStatusTab] = useState('Pendientes');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const [statusTab, setStatusTab] = useState("Pendientes");
-  const [activeId, setActiveId] = useState(PROPOSALS[0].id);
+  const cargarPropuestas = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await inversorService.obtenerMisPropuestas();
+      if (response.ok) {
+        // Asegurar que instrumentos sea array en cada propuesta
+        const data = (response.data || []).map((p: any) => ({
+          ...p,
+          instrumentos: parseInstrumentos(p.instrumentos),
+        }));
+        setPropuestas(data);
+        if (data.length > 0) {
+          setSelectedId(data[0].id);
+        }
+      } else {
+        setError(response.mensaje || 'Error al cargar propuestas');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.mensaje || 'Error de conexión');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Función para parsear instrumentos de forma segura
+  const parseInstrumentos = (instrumentos: any): Instrumento[] => {
+    if (!instrumentos) return [];
+    if (Array.isArray(instrumentos)) return instrumentos;
+    if (typeof instrumentos === 'string') {
+      try {
+        const parsed = JSON.parse(instrumentos);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  useEffect(() => {
+    cargarPropuestas();
+  }, []);
+
+  // Filtrar por estado
+  const filtered = propuestas.filter(
+    (p) => p.estado.toLowerCase() === statusTab.slice(0, -1).toLowerCase()
+  );
+
+  const selected = propuestas.find((p) => p.id === selectedId);
+  const instrumentos = selected ? parseInstrumentos(selected.instrumentos) : [];
+
+  // Colores para el gráfico
+  const COLORS = ['#266c61', '#6a7ee0', '#a06be0', '#d7638f', '#e0a13f', '#a83f3f', '#4aa3a3'];
+
+  if (loading) return <div className="loading">Cargando tus propuestas...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
+  if (propuestas.length === 0) {
+    return (
+      <section className="pr-page">
+        <div className="empty-state">
+          <h2>No tienes propuestas aún</h2>
+          <p>Completa el perfilamiento con el asesor IA para generar tu primera propuesta.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="pr-page">
       <header className="pr-header">
-        <span className="pr-badge">Diagnóstico conversacional completado</span>
-        <h1 className="pr-title">Tu Portafolio de Activos en Ecuador</h1>
+        <span className="pr-badge">
+          {propuestas.length} propuesta{propuestas.length > 1 ? 's' : ''} generada{propuestas.length > 1 ? 's' : ''}
+        </span>
+        <h1 className="pr-title">Mis Propuestas de Inversión</h1>
       </header>
 
+      {/* Pestañas de estado */}
       <div className="pr-status-tabs">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={statusTab === tab ? "active" : ""}
-            onClick={() => setStatusTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
+        {STATUS_TABS.map((tab) => {
+          const count = propuestas.filter(
+            (p) => p.estado.toLowerCase() === tab.slice(0, -1).toLowerCase()
+          ).length;
+          return (
+            <button
+              key={tab}
+              type="button"
+              className={statusTab === tab ? 'active' : ''}
+              onClick={() => setStatusTab(tab)}
+            >
+              {tab} ({count})
+            </button>
+          );
+        })}
       </div>
 
+      {/* Lista de propuestas filtradas */}
       <div className="pr-pending">
         <div className="pr-pending-head">
           <LayoutGrid size={16} aria-hidden="true" />
           <div>
             <strong>Propuestas {statusTab.toLowerCase()}</strong>
-            <span>Desliza para ver todas tus propuestas y selecciona una para revisarla.</span>
+            <span>Selecciona una para ver los detalles.</span>
           </div>
         </div>
 
         <div className="pr-ticket-scroll">
-          {PROPOSALS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={item.id === activeId ? "pr-ticket active" : "pr-ticket"}
-              onClick={() => setActiveId(item.id)}
-            >
-              <div className="pr-ticket-top">
-                <span className="pr-pill pr-pill-dark">{item.profile}</span>
-                <span className="pr-ticket-id">
-                  <Fingerprint size={12} aria-hidden="true" />
-                  #{item.id}
+          {filtered.length === 0 ? (
+            <div className="empty-state-small">No hay propuestas en este estado</div>
+          ) : (
+            filtered.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={item.id === selectedId ? 'pr-ticket active' : 'pr-ticket'}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <div className="pr-ticket-top">
+                  <span className={`pr-pill pr-pill-${item.estado}`}>
+                    {item.estado}
+                  </span>
+                  <span className="pr-ticket-id">
+                    <Fingerprint size={12} aria-hidden="true" />
+                    #{item.id.slice(0, 8)}
+                  </span>
+                </div>
+                <div className="pr-ticket-body">
+                  <span>Perfil</span>
+                  <strong>{item.PerfilInversionista?.perfil || 'N/A'}</strong>
+                </div>
+                <div className="pr-ticket-body">
+                  <span>Riesgo</span>
+                  <strong>{item.riesgo_esperado}</strong>
+                </div>
+                <div className="pr-ticket-body">
+                  <span>Generado</span>
+                  <strong>{new Date(item.createdAt).toLocaleDateString()}</strong>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Detalle de la propuesta seleccionada */}
+      {selected && (
+        <>
+          {/* Estado de revisión */}
+          <div className="pr-card pr-review">
+            <Clock3 size={20} aria-hidden="true" />
+            <div>
+              <div className="pr-review-top">
+                <strong>Estado de revisión</strong>
+                <span className={`pr-pill pr-pill-${selected.estado}`}>
+                  {selected.estado === 'pendiente' && '⏳ Pendiente'}
+                  {selected.estado === 'aprobada' && '✅ Aprobada'}
+                  {selected.estado === 'rechazada' && '❌ Rechazada'}
+                  {selected.estado === 'editada' && '✏️ Editada'}
                 </span>
               </div>
-              <div className="pr-ticket-body">
-                <span>Objetivo</span>
-                <strong>{item.objetivo}</strong>
-              </div>
-              <div className="pr-ticket-body">
-                <span>Inversión</span>
-                <strong>{item.inversion}</strong>
-              </div>
-              <div className="pr-ticket-body">
-                <span>Generado</span>
-                <strong>{item.generado}</strong>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="pr-card pr-review">
-        <Clock3 size={20} aria-hidden="true" />
-        <div>
-          <div className="pr-review-top">
-            <strong>Estado de revisión regulatoria</strong>
-            <span className="pr-pill pr-pill-warning">Pendiente de revisión</span>
-          </div>
-          <p className="pr-text">La propuesta está en lista de espera y será analizada por el asesor regulado en breve.</p>
-          <p className="pr-advisor">Asesor asignado: Dra. Ana Galarza</p>
-        </div>
-      </div>
-
-      <div className="pr-card">
-        <div className="pr-tags">
-          <span className="pr-pill pr-pill-dark">Agresivo</span>
-          <span className="pr-pill pr-pill-neutral">Puntaje: 12</span>
-          <span className="pr-pill pr-pill-neutral">Asesor: Dra. Ana Galarza</span>
-        </div>
-        <p className="pr-text">
-          Perfil calculado con puntaje acumulado de 12/15, reflejando el objetivo de comprar casa,
-          horizonte medio y tolerancia al riesgo alta. Ajustado al alza por edad menor a 30 años.
-        </p>
-        <ul className="pr-tips">
-          <li>Aproveche las tasas competitivas de los DPF locales en dólares, de bajo riesgo.</li>
-          <li>Diversifique en fondos mutuos administrados autorizados por la Superintendencia.</li>
-          <li>Considere invertir paulatinamente en acciones de empresas ecuatorianas líderes.</li>
-        </ul>
-      </div>
-
-      <div className="pr-card">
-        <strong>Desglose de reglas del agente financiero</strong>
-        <div className="pr-rule-grid">
-          {RULES.map((rule) => (
-            <div className="pr-rule-item" key={rule.label}>
-              <span>{rule.label}</span>
-              <strong>{rule.value}</strong>
+              <p className="pr-text">
+                {selected.estado === 'pendiente' && 'La propuesta está en espera de revisión por un asesor.'}
+                {selected.estado === 'aprobada' && '¡Felicidades! Tu propuesta ha sido aprobada.'}
+                {selected.estado === 'rechazada' && 'La propuesta fue rechazada. Puedes iniciar un nuevo diagnóstico.'}
+                {selected.estado === 'editada' && 'El asesor ha editado la propuesta. Revísala nuevamente.'}
+              </p>
             </div>
-          ))}
-        </div>
-        <p className="pr-note">El perfil se determina como: Conservador (≤5), Moderado (6–11), Agresivo (≥12).</p>
-      </div>
-
-      <div className="pr-card">
-        <h2 className="pr-card-title">Asignación de activos propuesta</h2>
-
-        <div className="pr-metric-grid">
-          <div className="pr-metric">
-            <span>Inversión planificada</span>
-            <strong>$500.00 USD</strong>
           </div>
-          <div className="pr-metric">
-            <span>Riesgo esperado</span>
-            <strong>Alto</strong>
-          </div>
-          <div className="pr-metric">
-            <span>Retorno histórico estimado</span>
-            <strong>9.95%</strong>
-          </div>
-        </div>
 
-        <div className="pr-chart-row">
-          <div className="pr-chart-box">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={ASSETS} dataKey="amount" nameKey="code" innerRadius={55} outerRadius={80} paddingAngle={2}>
-                  {ASSETS.map((asset, index) => (
-                    <Cell key={asset.code} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
+          {/* Perfil y justificación */}
+          <div className="pr-card">
+            <div className="pr-tags">
+              <span className="pr-pill pr-pill-dark">
+                {selected.PerfilInversionista?.perfil || 'Sin perfil'}
+              </span>
+              <span className="pr-pill pr-pill-neutral">
+                Puntaje: {selected.PerfilInversionista?.score ?? 'N/A'}
+              </span>
+              <span className="pr-pill pr-pill-neutral">
+                Objetivo: {selected.PerfilInversionista?.objetivo || 'N/A'}
+              </span>
+            </div>
+            {selected.justificacion && (
+              <p className="pr-text">{selected.justificacion}</p>
+            )}
+          </div>
+
+          {/* Asignación de activos */}
+          <div className="pr-card">
+            <h2 className="pr-card-title">Asignación de activos propuesta</h2>
+
+            <div className="pr-metric-grid">
+              <div className="pr-metric">
+                <span>Riesgo esperado</span>
+                <strong>{selected.riesgo_esperado}</strong>
+              </div>
+              <div className="pr-metric">
+                <span>Versión reglas</span>
+                <strong>{selected.version_reglas || 'v1.0.0'}</strong>
+              </div>
+              <div className="pr-metric">
+                <span>Estado</span>
+                <strong className={`estado-${selected.estado}`}>
+                  {selected.estado}
+                </strong>
+              </div>
+            </div>
+
+            {instrumentos.length > 0 && (
+              <div className="pr-chart-row">
+                <div className="pr-chart-box">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={instrumentos}
+                        dataKey="porcentaje"
+                        nameKey="nombre"
+                        innerRadius={55}
+                        outerRadius={80}
+                        paddingAngle={2}
+                      >
+                        {instrumentos.map((item, index) => (
+                          <Cell key={item.nombre} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => value !== undefined ? `${value}%` : ''}
+                        contentStyle={{ borderRadius: 6, border: '1px solid #dfe7e5', fontSize: 12 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+
+                  <ul className="pr-legend">
+                    {instrumentos.map((item, index) => (
+                      <li key={item.nombre}>
+                        <span
+                          className="pr-legend-dot"
+                          style={{ background: COLORS[index % COLORS.length] }}
+                        />
+                        {item.nombre}
+                        <b>{item.porcentaje}%</b>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="pr-table">
+                  <div className="pr-table-head">
+                    <span>Activo</span>
+                    <span>Riesgo</span>
+                    <span>%</span>
+                  </div>
+                  {instrumentos.map((item) => (
+                    <div className="pr-table-row" key={item.nombre}>
+                      <span className="pr-asset-name">
+                        <strong>{item.nombre}</strong>
+                        <small>{item.categoria}</small>
+                      </span>
+                      <span>{item.riesgo}</span>
+                      <span>{item.porcentaje}%</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
-                  contentStyle={{ borderRadius: 6, border: "1px solid #dfe7e5", fontSize: 12 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-
-            <ul className="pr-legend">
-              {ASSETS.map((asset, index) => (
-                <li key={asset.code}>
-                  <span className="pr-legend-dot" style={{ background: ASSET_COLORS[index % ASSET_COLORS.length] }} />
-                  {asset.code}
-                  <b>{asset.pct}%</b>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="pr-table">
-            <div className="pr-table-head">
-              <span>Activo</span>
-              <span>Riesgo</span>
-              <span>%</span>
-              <span>Monto</span>
-            </div>
-            {ASSETS.map((asset) => (
-              <div className="pr-table-row" key={asset.code}>
-                <span className="pr-asset-name">
-                  <strong>{asset.code}</strong>
-                  <small>{asset.desc}</small>
-                </span>
-                <span>{asset.risk}</span>
-                <span>{asset.pct}%</span>
-                <strong className="pr-amount">${asset.amount.toFixed(2)}</strong>
+                </div>
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      </div>
 
-      <div className="pr-card">
-        <strong>Justificación de la IA financiera</strong>
-        <p className="pr-text">
-          Portafolio diseñado para maximizar el crecimiento patrimonial asumiendo riesgos de mercado
-          locales. Se concentra en renta variable de emisores líderes, capturando altos rendimientos
-          por dividendos. Se asigna un 15% a bonos soberanos para complementar el rendimiento,
-          manteniendo liquidez mínima.
-        </p>
-      </div>
+          {/* Aviso regulatorio */}
+          <div className="pr-notice">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <span>
+              Aviso importante: esta es una simulación de asesoría automática (Robo-Advisor). De acuerdo a
+              la normativa financiera ecuatoriana, esta propuesta debe ser revisada, editada o autorizada
+              por un asesor humano registrado antes de proceder a la ejecución de órdenes reales.
+            </span>
+          </div>
+        </>
+      )}
 
-      <div className="pr-notice">
-        <AlertTriangle size={18} aria-hidden="true" />
-        <span>
-          Aviso importante: esta es una simulación de asesoría automática (Robo-Advisor). De acuerdo a
-          la normativa financiera ecuatoriana, esta propuesta debe ser revisada, editada o autorizada
-          por un asesor humano registrado antes de proceder a la ejecución de órdenes reales.
-        </span>
-      </div>
-
-      <button className="pr-repeat-btn" type="button">
+      <button className="pr-repeat-btn" type="button" onClick={() => window.location.href = '/inversor/principal'}>
         <RotateCcw size={16} aria-hidden="true" />
-        Repetir diagnóstico conversacional
+        Volver al diagnóstico
       </button>
     </section>
-  )
-}
+  );
+};
 
-export default MisPropuestas
+export default MisPropuestas;

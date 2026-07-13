@@ -1,0 +1,242 @@
+.gestion-propuestas {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #102d31;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #f1f5f3;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #102d31;
+  transition: background 0.15s ease;
+}
+
+.btn-refresh:hover {
+  background: #dbe4e1;
+}
+
+.propuestas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.propuesta-card {
+  background: #ffffff;
+  border: 1px solid #eef3f1;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(16, 45, 49, 0.06);
+  transition: box-shadow 0.15s ease;
+}
+
+.propuesta-card:hover {
+  box-shadow: 0 4px 16px rgba(16, 45, 49, 0.1);
+}
+
+.propuesta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.propuesta-id {
+  font-size: 13px;
+  color: #7a908c;
+  font-weight: 500;
+}
+
+.estado {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.estado.pendiente {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.estado.aprobada {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.estado.rechazada {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.estado.editada {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.propuesta-body p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: #1b2528;
+}
+
+.propuesta-body strong {
+  color: #102d31;
+}
+
+.justificacion {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f8fafa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #3d5a54;
+  border-left: 3px solid #d7f264;
+}
+
+.propuesta-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.propuesta-actions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.propuesta-actions button:hover {
+  opacity: 0.8;
+}
+
+.btn-success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-primary {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.btn-secondary {
+  background: #f1f5f3;
+  color: #102d31;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 28px;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #102d31;
+}
+
+.modal-content p {
+  margin-bottom: 12px;
+  color: #3d5a54;
+}
+
+.modal-content label {
+  display: block;
+  margin: 12px 0 4px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #102d31;
+}
+
+.modal-content textarea,
+.modal-content input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dbe4e1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loading,
+.error,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #7a908c;
+}
+
+.error {
+  color: #991b1b;
+}

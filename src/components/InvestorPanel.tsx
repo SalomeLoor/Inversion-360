@@ -1,31 +1,25 @@
 import type React from "react";
-import type { ComponentType } from "react";
-import { LogOut, ShieldCheck } from "lucide-react"; //biblioteca de iconos SVG
+import { LogOut, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "../styles/InvestorPanel.css";
 import { OptionsMenu } from "../utils/OptionsMenu";
 
-interface MenuOption {
-  rutas_padre: string;
-  icono?: ComponentType<any>;
-  btn_Name: string;
-}
 
 const InvestorPanel = (): React.ReactElement => {
   const navigate = useNavigate();
+  const { logout: authLogout , user } = useAuth(); // 👈 Obtén la función del contexto
 
-  // Ruta activa del menú
   const [btnActivo, setBtnActivo] = useState<string>("/inversor/principal");
 
-  // Navegar entre las opciones del menú
   const botonActivo = (ruta: string): void => {
     setBtnActivo(ruta);
     navigate(ruta);
   };
 
-  // Cerrar sesión
   const logout = (): void => {
+    authLogout(); 
     setBtnActivo("/inversor/principal");
     navigate("/");
   };
@@ -43,8 +37,9 @@ const InvestorPanel = (): React.ReactElement => {
           </div>
 
           <nav className="nav-stack">
-            {OptionsMenu.map((menu: any, index: number) => (
-              <button
+            {OptionsMenu.map((menu: any, index: number) => {
+              return menu.rol_permitido === user?.rol ? (
+                <button
                 key={index}
                 type="button"
                 className={
@@ -57,12 +52,12 @@ const InvestorPanel = (): React.ReactElement => {
                 {menu.icono && <menu.icono size={18} aria-hidden="true" />}
                 {menu.btn_Name}
               </button>
-            ))}
+              ) : null;
+            })}
           </nav>
 
           <div className="sidebar-note">
             <span>Sesión</span>
-
             <button
               className="logout-button"
               onClick={logout}
