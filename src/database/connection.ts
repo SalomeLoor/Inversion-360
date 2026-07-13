@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getCookie } from '../utils/cookies';
 
-const url = "http://localhost:3000/api";
+const url = "https://backinversion360.onrender.com/api";
 
 export const connection = axios.create({
   baseURL: url,
