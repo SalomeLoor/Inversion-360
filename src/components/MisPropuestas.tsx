@@ -164,7 +164,7 @@ const MisPropuestas = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+                  formatter={(value: any, name: any) => [`$${Number(value).toFixed(2)}`, name]}
                   contentStyle={{ borderRadius: 6, border: "1px solid #dfe7e5", fontSize: 12 }}
                 />
               </PieChart>

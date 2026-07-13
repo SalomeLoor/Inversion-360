@@ -1,5 +1,5 @@
 
-import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import { Route, BrowserRouter as Router, Routes, Navigate } from 'react-router-dom'
 import './App.css'
 import HomePage from './pages/HomePage'
 import InvestorPanel from './components/InvestorPanel'
@@ -14,7 +14,8 @@ function App() {
     <>
       <Router>
         <Routes>
-          <Route path="*" element={<HomePage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Navigate to="/inversor/principal" replace />} />
 
           <Route path="/inversor" element={<InvestorPanel />}>
             <Route path="principal" element={<Principal />} />
@@ -22,9 +23,8 @@ function App() {
             <Route path="historial" element={<HistorialPropuestas />} />
           </Route>
 
-
-
           <Route path="/asesor" element={<AdvisorPanel />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </>
