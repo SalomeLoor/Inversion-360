@@ -14,18 +14,19 @@ import {
   FolderOpen,
   ArrowLeft
 } from "lucide-react";
-import { getSessionUser } from "../utils/auth";
+import { useAuth } from "../context/AuthContext";
+import { asesorService } from "../services/asesorservice";
 import type { Proposal, AssetAllocation } from "../types/proposal";
-import { INITIAL_PROPOSALS } from "../types/proposal";
 import "../styles/AdvisorPanel.css";
 
 const AdvisorPanel = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
   
-  // States in memory for proposals and revision history
-  const [proposals, setProposals] = useState<Proposal[]>(INITIAL_PROPOSALS);
+  // Real backend integration states
+  const [proposals, setProposals] = useState<Proposal[]>([]);
   const [revisions, setRevisions] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   
   // Selected proposal in the pending list
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
@@ -38,14 +39,99 @@ const AdvisorPanel = () => {
   // Viewed revision detail (for diff comparison)
   const [viewedRevisionId, setViewedRevisionId] = useState<string | null>(null);
 
-  const currentUser = getSessionUser();
-  const advisorName = currentUser ? currentUser.fullName : "Dra. Ana Galarza";
+  // Authenticator Context integration
+  const { user, logout: authLogout } = useAuth();
+  const advisorName = user ? user.name : "Dra. Ana Galarza";
 
   // Filter pending proposals
   const pendingProposals = proposals.filter((p) => p.status === "Pendiente");
 
   // Get currently selected proposal
   const selectedProposal = proposals.find((p) => p.id === selectedProposalId && p.status === "Pendiente");
+
+  // Helper to map backend proposal structure to our frontend presentation Proposal
+  const mapBackendProposal = (p: any): Proposal => {
+    let assets: AssetAllocation[] = [];
+    if (p.instrumentos) {
+      let parsed: any[] = [];
+      if (Array.isArray(p.instrumentos)) {
+        parsed = p.instrumentos;
+      } else if (typeof p.instrumentos === "string") {
+        try {
+          parsed = JSON.parse(p.instrumentos);
+        } catch {
+          parsed = [];
+        }
+      }
+      
+      assets = parsed.map((inst: any) => ({
+        code: inst.nombre || inst.code || "Activo",
+        desc: inst.desc || inst.categoria || "Descripción",
+        risk: inst.riesgo || "Medio",
+        type: inst.categoria || "RENTA FIJA",
+        pct: inst.porcentaje || 0,
+        amount: inst.monto || 0
+      }));
+    }
+
+    // Default assets if empty
+    if (assets.length === 0) {
+      assets = [
+        { code: "EC-CASH", desc: "Depósito a Plazo Fijo (DPF) Bancos Ecuador", risk: "Bajo", type: "LIQUIDEZ", pct: 0, amount: 0 },
+        { code: "EC-MUTUAL-FUND", desc: "Fondo de Inversión Local Administrado", risk: "Medio", type: "RENTA FIJA", pct: 0, amount: 0 },
+        { code: "EC-REIT", desc: "Fideicomiso Inmobiliario Local (Bienes Raíces UIO/GYE)", risk: "Medio", type: "ALTERNATIVOS", pct: 0, amount: 0 },
+        { code: "EC-FAVORITA", desc: "Acciones Corporación Favorita C.A.", risk: "Alto", type: "RENTA VARIABLE", pct: 0, amount: 0 },
+        { code: "EC-PICHINCHA", desc: "Acciones Banco Pichincha C.A.", risk: "Alto", type: "RENTA VARIABLE", pct: 0, amount: 0 },
+        { code: "EC-GOV-BOND", desc: "Bonos del Estado Ecuatoriano", risk: "Alto", type: "RENTA FIJA", pct: 0, amount: 0 }
+      ];
+    }
+
+    const totalInversion = assets.reduce((sum, a) => sum + (a.amount || 0), 0) || 500;
+
+    return {
+      id: p.id,
+      clientId: p.perfil_id || "Cliente",
+      clientName: p.PerfilInversionista?.perfil || "Cliente",
+      age: 25, // Fallback if age not in PerfilInversionista
+      monthlyIncome: parseFloat(p.PerfilInversionista?.ingresos) || 2000,
+      profile: p.PerfilInversionista?.perfil || p.riesgo_esperado || "Moderado",
+      objetivo: p.PerfilInversionista?.objetivo || "COMPRAR CASA",
+      inversion: totalInversion,
+      horizonte: p.PerfilInversionista?.horizonte || "MEDIO",
+      tolerancia: p.PerfilInversionista?.tolerancia_perdida || "MEDIA",
+      generado: p.createdAt ? p.createdAt.substring(0, 19).replace("T", " ") : new Date().toISOString().substring(0, 19).replace("T", " "),
+      status: p.estado === "pendiente" ? "Pendiente" : p.estado === "aprobada" ? "Aprobada" : "Rechazada",
+      score: p.PerfilInversionista?.score || 10,
+      rulesVersion: p.version_reglas || "v1.0.0",
+      justificationIA: p.justificacion || "Portafolio sugerido por la IA.",
+      assets: assets
+    };
+  };
+
+  // Load pending proposals from actual database
+  const loadPendingProposals = async () => {
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      const response = await asesorService.listarPendientes();
+      if (response && response.ok) {
+        const rawList = response.data || [];
+        const mapped = rawList.map((p: any) => mapBackendProposal(p));
+        setProposals(mapped);
+      } else if (Array.isArray(response)) {
+        setProposals(response.map((p: any) => mapBackendProposal(p)));
+      }
+    } catch (error) {
+      console.error("Error al cargar propuestas pendientes:", error);
+      setErrorMessage("Error de conexión al cargar propuestas desde el backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingProposals();
+  }, []);
 
   // Initialize editable asset percentages when selected proposal changes
   useEffect(() => {
@@ -60,8 +146,9 @@ const AdvisorPanel = () => {
     }
   }, [selectedProposalId]);
 
-  // Handle logout
+  // Handle logout using authenticator context
   function logout() {
+    authLogout();
     navigate("/");
   }
 
@@ -77,8 +164,8 @@ const AdvisorPanel = () => {
     }));
   };
 
-  // Register advisor decision
-  const registerDecision = (type: "Aprobada sin Cambios" | "Modificada y Aprobada" | "Rechazada") => {
+  // Register advisor decision in real database
+  const registerDecision = async (type: "Aprobada sin Cambios" | "Modificada y Aprobada" | "Rechazada") => {
     if (!selectedProposal) return;
     setErrorMessage("");
 
@@ -94,42 +181,64 @@ const AdvisorPanel = () => {
       return;
     }
 
-    // Map edited assets (calculate amounts based on new percentages)
-    const revisedAssets: AssetAllocation[] = selectedProposal.assets.map((asset) => {
-      const newPct = type === "Aprobada sin Cambios" ? asset.pct : (editedPercentages[asset.code] || 0);
-      const newAmount = parseFloat(((newPct / 100) * selectedProposal.inversion).toFixed(2));
-      return {
-        ...asset,
-        pct: newPct,
-        amount: newAmount,
+    try {
+      // Map edited assets (calculate amounts based on new percentages)
+      const revisedAssets: AssetAllocation[] = selectedProposal.assets.map((asset) => {
+        const newPct = type === "Aprobada sin Cambios" ? asset.pct : (editedPercentages[asset.code] || 0);
+        const newAmount = parseFloat(((newPct / 100) * selectedProposal.inversion).toFixed(2));
+        return {
+          ...asset,
+          pct: newPct,
+          amount: newAmount,
+        };
+      });
+
+      // Execute actual API calls
+      if (type === "Aprobada sin Cambios") {
+        await asesorService.aprobar(selectedProposal.id, comments.trim());
+      } else if (type === "Rechazada") {
+        await asesorService.rechazar(selectedProposal.id, comments.trim());
+      } else if (type === "Modificada y Aprobada") {
+        const instrumentosPayload = revisedAssets.map((asset) => ({
+          nombre: asset.code,
+          categoria: asset.type,
+          porcentaje: asset.pct,
+          riesgo: asset.risk,
+          monto: asset.amount
+        }));
+        await asesorService.editar(selectedProposal.id, {
+          instrumentos: instrumentosPayload,
+          riesgo_esperado: selectedProposal.profile,
+          comentarios: comments.trim()
+        });
+      }
+
+      // Update proposal state local record
+      const updatedStatus = type === "Rechazada" ? "Rechazada" : "Aprobada";
+      const updatedProposal: Proposal = {
+        ...selectedProposal,
+        status: updatedStatus,
+        advisorComments: comments.trim(),
+        reviewedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
+        reviewedBy: advisorName,
+        decisionType: type,
+        revisedAssets: revisedAssets,
+        assets: selectedProposal.assets
       };
-    });
 
-    // Update proposal in proposals list
-    const updatedStatus = type === "Rechazada" ? "Rechazada" : "Aprobada";
-    
-    const updatedProposal: Proposal = {
-      ...selectedProposal,
-      status: updatedStatus,
-      advisorComments: comments.trim(),
-      reviewedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      reviewedBy: advisorName,
-      decisionType: type,
-      revisedAssets: revisedAssets,
-      assets: selectedProposal.assets // keep original assets for history diff!
-    };
+      // Add to local session revisions list
+      setRevisions((prev) => [updatedProposal, ...prev]);
 
-    // Save to state
-    setProposals((prev) =>
-      prev.map((p) => (p.id === selectedProposal.id ? updatedProposal : p))
-    );
+      // Remove from pending list
+      setProposals((prev) => prev.filter((p) => p.id !== selectedProposal.id));
 
-    // Add to revision history state
-    setRevisions((prev) => [updatedProposal, ...prev]);
-
-    // Reset selection
-    setSelectedProposalId(null);
-    setComments("");
+      // Reset selection
+      setSelectedProposalId(null);
+      setComments("");
+    } catch (err: any) {
+      console.error("Error al registrar decisión en base de datos:", err);
+      setErrorMessage("Error de servidor al guardar la decisión en la base de datos.");
+    }
   };
 
   // Get currently viewed revision for comparison
@@ -221,7 +330,11 @@ const AdvisorPanel = () => {
                 </div>
 
                 <div className="proposals-scroll">
-                  {pendingProposals.length === 0 ? (
+                  {loading ? (
+                    <div className="empty-scroll-state">
+                      <p>Cargando propuestas desde el servidor...</p>
+                    </div>
+                  ) : pendingProposals.length === 0 ? (
                     <div className="empty-scroll-state">
                       <CheckCircle2 size={36} className="success-icon" />
                       <p>No hay propuestas pendientes de revisión.</p>
@@ -238,13 +351,13 @@ const AdvisorPanel = () => {
                           <span className="profile-badge">{item.profile}</span>
                           <span className="proposal-id">
                             <Fingerprint size={12} aria-hidden="true" />
-                            #{item.id}
+                            #{item.id.substring(0, 8)}
                           </span>
                         </div>
                         <div className="proposal-card-details">
                           <div className="detail-row">
-                            <span>Cliente:</span>
-                            <strong>{item.clientId}</strong>
+                            <span>Perfil ID:</span>
+                            <strong>{item.clientId.substring(0, 8)}</strong>
                           </div>
                           <div className="detail-row">
                             <span>Inversión:</span>
@@ -274,7 +387,7 @@ const AdvisorPanel = () => {
                   <div className="audit-flow-container">
                     <div className="audit-header">
                       <h1>Auditoría de Propuesta</h1>
-                      <span className="audit-id-badge">ID: {selectedProposal.id}...</span>
+                      <span className="audit-id-badge">ID: {selectedProposal.id.substring(0, 8)}...</span>
                     </div>
 
                     {errorMessage && (
@@ -290,8 +403,8 @@ const AdvisorPanel = () => {
                       <div className="details-table">
                         <div className="details-grid">
                           <div className="grid-cell">
-                            <span className="cell-label">Usuario Cliente:</span>
-                            <strong className="cell-value">{selectedProposal.clientId} ({selectedProposal.clientName})</strong>
+                            <span className="cell-label">Perfil ID:</span>
+                            <strong className="cell-value">{selectedProposal.clientId}</strong>
                           </div>
                           <div className="grid-cell">
                             <span className="cell-label">Perfil del Agente:</span>
@@ -474,7 +587,7 @@ const AdvisorPanel = () => {
                         <tr>
                           <th>Fecha</th>
                           <th>ID Propuesta</th>
-                          <th>Cliente</th>
+                          <th>Cliente (Perfil ID)</th>
                           <th>Monto ($)</th>
                           <th>Perfil IA</th>
                           <th>Decisión</th>
@@ -498,8 +611,8 @@ const AdvisorPanel = () => {
                               title="Haga clic para ver la comparación detallada"
                             >
                               <td>{rev.reviewedAt}</td>
-                              <td><strong className="text-blue">#{rev.id}</strong></td>
-                              <td>{rev.clientId}</td>
+                              <td><strong className="text-blue">#{rev.id.substring(0, 8)}</strong></td>
+                              <td>{rev.clientId.substring(0, 8)}</td>
                               <td>${rev.inversion} USD</td>
                               <td><span className="profile-badge-small">{rev.profile}</span></td>
                               <td>
@@ -530,7 +643,7 @@ const AdvisorPanel = () => {
                         Volver al Historial
                       </button>
                       <div className="diff-view-title-group">
-                        <h2>Comparación de Propuesta: #{viewedRevision.id}</h2>
+                        <h2>Comparación de Propuesta: #{viewedRevision.id.substring(0, 8)}</h2>
                         <span className={`decision-badge large ${viewedRevision.decisionType?.toLowerCase().replace(/ /g, "-")}`}>
                           Decisión: {viewedRevision.decisionType}
                         </span>
@@ -539,7 +652,7 @@ const AdvisorPanel = () => {
 
                     <div className="diff-meta-summary">
                       <div className="meta-box">
-                        <strong>Cliente:</strong> {viewedRevision.clientId} ({viewedRevision.clientName})
+                        <strong>Cliente:</strong> {viewedRevision.clientId.substring(0, 8)}
                       </div>
                       <div className="meta-box">
                         <strong>Revisado por:</strong> {viewedRevision.reviewedBy}
