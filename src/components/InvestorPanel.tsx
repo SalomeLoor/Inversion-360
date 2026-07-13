@@ -43,7 +43,7 @@ const InvestorPanel = (): React.ReactElement => {
           </div>
 
           <nav className="nav-stack">
-            {OptionsMenu.map((menu: MenuOption, index: number) => (
+            {OptionsMenu.map((menu: any, index: number) => (
               <button
                 key={index}
                 type="button"
@@ -75,17 +75,6 @@ const InvestorPanel = (): React.ReactElement => {
         </aside>
       </div>
       <section className="panelCentral">
-        <header className="portal-topbar">
-          <div className="portal-title">AEGIS ROBO-ADVISORY</div>
-          <div className="portal-nav-buttons">
-            <button className="portal-nav-btn active" onClick={() => navigate("/inversor/principal")}>
-              Portal Inversionista
-            </button>
-            <button className="portal-nav-btn" onClick={() => navigate("/asesor")}>
-              Portal Asesor Humano
-            </button>
-          </div>
-        </header>
         <Outlet />
       </section>
     </>
